@@ -371,14 +371,14 @@ commit
 
 Your deployment is successful when:
 
-- ✅ All ISIS adjacencies are up
-- ✅ All routers see all Node SIDs in SR database
-- ✅ BGP sessions are established
-- ✅ Traffic flows through the network
-- ✅ TI-LFA provides backup paths
-- ✅ BFD sessions are operational
-- ✅ Failover tests complete successfully
-- ✅ Customer services are working
+- All ISIS adjacencies are up
+- All routers see all Node SIDs in SR database
+- BGP sessions are established
+- Traffic flows through the network
+- TI-LFA provides backup paths
+- BFD sessions are operational
+- Failover tests complete successfully
+- Customer services are working
 
 ---
 
