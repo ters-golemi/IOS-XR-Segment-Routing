@@ -1,0 +1,401 @@
+!! ========================================
+!! Complete Configuration Example: CORE-1
+!! Role: Core Router (P Node)
+!! Loopback: 1.1.1.1/32
+!! SR Node SID: 16101 (SRGB 16000 + Index 101)
+!! ========================================
+
+hostname CORE-1
+
+!! ========================================
+!! Segment Routing Global Configuration
+!! ========================================
+segment-routing
+ global-block 16000 23999
+ !
+
+!! ========================================
+!! Loopback Interface
+!! ========================================
+interface Loopback0
+ description Management and SR Node SID
+ ipv4 address 1.1.1.1 255.255.255.255
+!
+
+!! ========================================
+!! Physical Interfaces
+!! ========================================
+
+!! Link to CORE-2
+interface TenGigE0/0/0/0
+ description Link to CORE-2 TenGigE0/0/0/0
+ ipv4 address 172.16.0.1 255.255.255.252
+ ipv4 point-to-point
+ bfd mode ietf
+ bfd address-family ipv4 timers start 180
+ bfd address-family ipv4 multiplier 3
+ bfd address-family ipv4 destination 172.16.0.2
+ bfd address-family ipv4 fast-detect
+ no shutdown
+!
+
+!! Link to CORE-3
+interface TenGigE0/0/0/1
+ description Link to CORE-3 TenGigE0/0/0/0
+ ipv4 address 172.16.0.5 255.255.255.252
+ ipv4 point-to-point
+ bfd mode ietf
+ bfd address-family ipv4 timers start 180
+ bfd address-family ipv4 multiplier 3
+ bfd address-family ipv4 destination 172.16.0.6
+ bfd address-family ipv4 fast-detect
+ no shutdown
+!
+
+!! Link to AGG-1
+interface TenGigE0/0/0/2
+ description Link to AGG-1 TenGigE0/0/0/0
+ ipv4 address 172.16.1.1 255.255.255.252
+ ipv4 point-to-point
+ bfd mode ietf
+ bfd address-family ipv4 timers start 180
+ bfd address-family ipv4 multiplier 3
+ bfd address-family ipv4 destination 172.16.1.2
+ bfd address-family ipv4 fast-detect
+ no shutdown
+!
+
+!! Link to AGG-2
+interface TenGigE0/0/0/3
+ description Link to AGG-2 TenGigE0/0/0/0
+ ipv4 address 172.16.2.1 255.255.255.252
+ ipv4 point-to-point
+ bfd mode ietf
+ bfd address-family ipv4 timers start 180
+ bfd address-family ipv4 multiplier 3
+ bfd address-family ipv4 destination 172.16.2.2
+ bfd address-family ipv4 fast-detect
+ no shutdown
+!
+
+!! Link to AGG-3
+interface TenGigE0/0/0/4
+ description Link to AGG-3 TenGigE0/0/0/0
+ ipv4 address 172.16.3.1 255.255.255.252
+ ipv4 point-to-point
+ bfd mode ietf
+ bfd address-family ipv4 timers start 180
+ bfd address-family ipv4 multiplier 3
+ bfd address-family ipv4 destination 172.16.3.2
+ bfd address-family ipv4 fast-detect
+ no shutdown
+!
+
+!! Link to AGG-4
+interface TenGigE0/0/0/5
+ description Link to AGG-4 TenGigE0/0/0/0
+ ipv4 address 172.16.4.1 255.255.255.252
+ ipv4 point-to-point
+ bfd mode ietf
+ bfd address-family ipv4 timers start 180
+ bfd address-family ipv4 multiplier 3
+ bfd address-family ipv4 destination 172.16.4.2
+ bfd address-family ipv4 fast-detect
+ no shutdown
+!
+
+!! ========================================
+!! Router ISIS Configuration
+!! ========================================
+router isis CORE
+ is-type level-2-only
+ net 49.0001.0001.0001.0001.00
+ nsr
+ nsf cisco
+ log adjacency changes
+ lsp-gen-interval maximum-wait 5000 initial-wait 50 secondary-wait 200
+ lsp-refresh-interval 65000
+ max-lsp-lifetime 65535
+ !
+ address-family ipv4 unicast
+  metric-style wide
+  advertise passive-only
+  mpls traffic-eng level-2-only
+  mpls traffic-eng router-id Loopback0
+  segment-routing mpls
+  segment-routing prefix-sid-map advertise-local
+  spf-interval maximum-wait 5000 initial-wait 50 secondary-wait 200
+  microloop avoidance segment-routing
+ !
+ !
+ interface Loopback0
+  passive
+  address-family ipv4 unicast
+   prefix-sid index 101
+  !
+ !
+ interface TenGigE0/0/0/0
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 10
+  !
+ !
+ interface TenGigE0/0/0/1
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 10
+  !
+ !
+ interface TenGigE0/0/0/2
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 100
+  !
+ !
+ interface TenGigE0/0/0/3
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 100
+  !
+ !
+ interface TenGigE0/0/0/4
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 100
+  !
+ !
+ interface TenGigE0/0/0/5
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 100
+  !
+ !
+!
+
+!! ========================================
+!! BGP Configuration (Route Reflector)
+!! ========================================
+router bgp 65000
+ bgp router-id 1.1.1.1
+ bgp graceful-restart
+ !
+ address-family ipv4 unicast
+ !
+ address-family vpnv4 unicast
+ !
+ !
+ neighbor-group AGG-CLIENTS
+  remote-as 65000
+  update-source Loopback0
+  address-family ipv4 unicast
+   route-reflector-client
+  !
+  address-family vpnv4 unicast
+   route-reflector-client
+  !
+ !
+ !
+ neighbor-group EDGE-CLIENTS
+  remote-as 65000
+  update-source Loopback0
+  address-family ipv4 unicast
+   route-reflector-client
+  !
+  address-family vpnv4 unicast
+   route-reflector-client
+  !
+ !
+ !
+ neighbor 2.2.2.2
+  remote-as 65000
+  description CORE-2 RR Peer
+  update-source Loopback0
+  address-family ipv4 unicast
+  !
+  address-family vpnv4 unicast
+  !
+ !
+ neighbor 10.1.1.1
+  use neighbor-group AGG-CLIENTS
+  description AGG-1
+ !
+ neighbor 10.2.2.2
+  use neighbor-group AGG-CLIENTS
+  description AGG-2
+ !
+ neighbor 10.3.3.3
+  use neighbor-group AGG-CLIENTS
+  description AGG-3
+ !
+ neighbor 10.4.4.4
+  use neighbor-group AGG-CLIENTS
+  description AGG-4
+ !
+ neighbor 20.1.1.1
+  use neighbor-group EDGE-CLIENTS
+  description EDGE-1
+ !
+ neighbor 20.2.2.2
+  use neighbor-group EDGE-CLIENTS
+  description EDGE-2
+ !
+ neighbor 20.3.3.3
+  use neighbor-group EDGE-CLIENTS
+  description EDGE-3
+ !
+ neighbor 20.4.4.4
+  use neighbor-group EDGE-CLIENTS
+  description EDGE-4
+ !
+ neighbor 20.5.5.5
+  use neighbor-group EDGE-CLIENTS
+  description EDGE-5
+ !
+!
+
+!! ========================================
+!! MPLS Configuration
+!! ========================================
+mpls oam
+!
+mpls ldp
+ log
+  neighbor
+ !
+!
+
+!! ========================================
+!! BFD Global Configuration
+!! ========================================
+bfd
+ multipath include location 0/0/CPU0
+!
+
+!! ========================================
+!! SSH and Management
+!! ========================================
+ssh server v2
+ssh server vrf default
+ssh server netconf vrf default
+
+!! ========================================
+!! NETCONF
+!! ========================================
+netconf-yang agent
+ ssh
+!
+
+!! ========================================
+!! Syslog
+!! ========================================
+logging console debugging
+logging monitor debugging
+logging buffered 10000000
+logging 10.100.100.100 vrf default
+logging facility local7
+logging hostnameprefix CORE-1
+
+!! ========================================
+!! NTP
+!! ========================================
+ntp
+ server 10.100.100.10
+ source Loopback0
+!
+
+!! ========================================
+!! SNMP
+!! ========================================
+snmp-server community public RO
+snmp-server traps isis all
+snmp-server traps bgp
+snmp-server traps bfd
+snmp-server host 10.100.100.200 traps version 2c public
+
+!! ========================================
+!! AAA
+!! ========================================
+aaa authentication login default local
+aaa authorization exec default local
+aaa accounting exec default start-stop group tacacs+
+aaa accounting commands default start-stop group tacacs+
+
+!! ========================================
+!! TACACS+ (if used)
+!! ========================================
+tacacs source-interface Loopback0
+tacacs-server host 10.100.100.50
+ port 49
+!
+
+!! ========================================
+!! User Configuration
+!! ========================================
+username admin
+ group root-lr
+ group cisco-support
+ secret 10 $6$encrypted_password_placeholder
+!
+
+username operator
+ group operator
+ secret 10 $6$encrypted_password_placeholder
+!
+
+!! ========================================
+!! Control Plane Protection
+!! ========================================
+control-plane
+ management-plane
+  inband
+   interface all
+    allow all
+   !
+  !
+ !
+!
+
+!! ========================================
+!! Line Configuration
+!! ========================================
+line console
+ exec-timeout 30 0
+ session-timeout 30
+!
+line default
+ exec-timeout 30 0
+ session-timeout 30
+!
+
+!! ========================================
+!! Banner
+!! ========================================
+banner motd ^
+****************************************************
+*                                                  *
+*  CORE-1 - Core Router                           *
+*  Segment Routing Node SID: 16101                *
+*  Authorized Access Only                         *
+*                                                  *
+****************************************************
+^
+
+!! End of CORE-1 Configuration

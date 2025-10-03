@@ -1,0 +1,223 @@
+!! ========================================
+!! IOS XR Core Router (P Node) Configuration Template
+!! Role: Core/Provider Router
+!! Example: CORE-1 (Loopback: 1.1.1.1, SR Index: 101)
+!! ========================================
+
+!! Basic Hostname Configuration
+!! Replace CORE-X with actual router name (e.g., CORE-1, CORE-2, CORE-3)
+hostname CORE-X
+
+!! ========================================
+!! Segment Routing Global Configuration
+!! ========================================
+segment-routing
+ global-block 16000 23999
+ !
+
+!! ========================================
+!! Loopback Interface Configuration
+!! Primary identifier for the router in SR/IGP
+!! ========================================
+interface Loopback0
+ description Management and SR Node SID
+ ipv4 address X.X.X.X 255.255.255.255
+ ! Example: CORE-1 = 1.1.1.1/32, CORE-2 = 2.2.2.2/32, CORE-3 = 3.3.3.3/32
+!
+
+!! ========================================
+!! Physical Interface Configuration
+!! Point-to-Point links to other core and aggregation routers
+!! ========================================
+
+!! Example: Link to CORE-2
+interface TenGigE0/0/0/0
+ description Link to CORE-2 TenGigE0/0/0/0
+ ipv4 address 172.16.0.1 255.255.255.252
+ ipv4 point-to-point
+ no shutdown
+!
+
+!! Example: Link to CORE-3
+interface TenGigE0/0/0/1
+ description Link to CORE-3 TenGigE0/0/0/0
+ ipv4 address 172.16.0.5 255.255.255.252
+ ipv4 point-to-point
+ no shutdown
+!
+
+!! Example: Link to AGG-1
+interface TenGigE0/0/0/2
+ description Link to AGG-1 TenGigE0/0/0/0
+ ipv4 address 172.16.1.1 255.255.255.252
+ ipv4 point-to-point
+ no shutdown
+!
+
+!! Example: Link to AGG-2
+interface TenGigE0/0/0/3
+ description Link to AGG-2 TenGigE0/0/0/0
+ ipv4 address 172.16.2.1 255.255.255.252
+ ipv4 point-to-point
+ no shutdown
+!
+
+!! ========================================
+!! Router ISIS Configuration
+!! IS-IS with Segment Routing Extensions
+!! ========================================
+router isis CORE
+ is-type level-2-only
+ net 49.0001.XXXX.XXXX.XXXX.00
+ ! Example: CORE-1 = 49.0001.0001.0001.0001.00
+ ! Example: CORE-2 = 49.0001.0002.0002.0002.00
+ ! Example: CORE-3 = 49.0001.0003.0003.0003.00
+ !
+ nsr
+ nsf cisco
+ log adjacency changes
+ lsp-gen-interval maximum-wait 5000 initial-wait 50 secondary-wait 200
+ lsp-refresh-interval 65000
+ max-lsp-lifetime 65535
+ !
+ address-family ipv4 unicast
+  metric-style wide
+  advertise passive-only
+  mpls traffic-eng level-2-only
+  mpls traffic-eng router-id Loopback0
+  segment-routing mpls
+  segment-routing prefix-sid-map advertise-local
+  spf-interval maximum-wait 5000 initial-wait 50 secondary-wait 200
+  microloop avoidance segment-routing
+ !
+ !
+ interface Loopback0
+  passive
+  address-family ipv4 unicast
+   prefix-sid index XXX
+   ! Example: CORE-1 = 101, CORE-2 = 102, CORE-3 = 103
+  !
+ !
+ interface TenGigE0/0/0/0
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 10
+  !
+ !
+ interface TenGigE0/0/0/1
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 10
+  !
+ !
+ interface TenGigE0/0/0/2
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 100
+  !
+ !
+ interface TenGigE0/0/0/3
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 100
+  !
+ !
+!
+
+!! ========================================
+!! MPLS Configuration
+!! ========================================
+mpls oam
+!
+mpls ldp
+ log
+  neighbor
+ !
+!
+
+!! ========================================
+!! BFD Configuration for Fast Failure Detection
+!! ========================================
+bfd
+ multipath include location 0/0/CPU0
+!
+
+!! Example: BFD on interfaces
+interface TenGigE0/0/0/0
+ bfd mode ietf
+ bfd address-family ipv4 timers start 180
+ bfd address-family ipv4 multiplier 3
+ bfd address-family ipv4 destination 172.16.0.2
+ bfd address-family ipv4 fast-detect
+!
+
+!! ========================================
+!! SSH and Management Configuration
+!! ========================================
+ssh server v2
+ssh server vrf default
+ssh server netconf vrf default
+
+!! ========================================
+!! NETCONF Configuration (Optional)
+!! ========================================
+netconf-yang agent
+ ssh
+!
+
+!! ========================================
+!! Syslog Configuration
+!! ========================================
+logging console debugging
+logging monitor debugging
+logging buffered 10000000
+
+!! ========================================
+!! NTP Configuration
+!! ========================================
+ntp
+ server X.X.X.X
+ ! Replace with your NTP server
+!
+
+!! ========================================
+!! AAA Configuration (Basic)
+!! ========================================
+aaa authentication login default local
+aaa authorization exec default local
+
+!! ========================================
+!! User Configuration
+!! ========================================
+username admin
+ group root-lr
+ group cisco-support
+ secret 10 $6$encrypted_password_here
+!
+
+!! ========================================
+!! Control Plane Protection
+!! ========================================
+control-plane
+ management-plane
+  inband
+   interface all
+    allow all
+   !
+  !
+ !
+!
+
+!! End of Core Router Configuration
