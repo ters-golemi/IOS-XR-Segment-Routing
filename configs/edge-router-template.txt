@@ -1,0 +1,519 @@
+!! ========================================
+!! IOS XR Edge Router (PE Node) Configuration Template
+!! Role: Provider Edge / Customer Access Router
+!! Example: EDGE-1 (Loopback: 20.1.1.1, SR Index: 301)
+!! ========================================
+
+!! Basic Hostname Configuration
+!! Replace EDGE-X with actual router name (e.g., EDGE-1, EDGE-2, EDGE-3, EDGE-4, EDGE-5)
+hostname EDGE-X
+
+!! ========================================
+!! Segment Routing Global Configuration
+!! ========================================
+segment-routing
+ global-block 16000 23999
+ !
+
+!! ========================================
+!! VRF Configuration for L3VPN Services
+!! ========================================
+vrf CUSTOMER-A
+ address-family ipv4 unicast
+  import route-target
+   65000:100
+  !
+  export route-target
+   65000:100
+  !
+ !
+!
+
+vrf CUSTOMER-B
+ address-family ipv4 unicast
+  import route-target
+   65000:200
+  !
+  export route-target
+   65000:200
+  !
+ !
+!
+
+vrf CUSTOMER-C
+ address-family ipv4 unicast
+  import route-target
+   65000:300
+  !
+  export route-target
+   65000:300
+  !
+ !
+!
+
+!! ========================================
+!! Loopback Interface Configuration
+!! Primary identifier for the router in SR/IGP
+!! ========================================
+interface Loopback0
+ description Management and SR Node SID
+ ipv4 address X.X.X.X 255.255.255.255
+ ! Example: EDGE-1 = 20.1.1.1/32, EDGE-2 = 20.2.2.2/32
+ ! Example: EDGE-3 = 20.3.3.3/32, EDGE-4 = 20.4.4.4/32, EDGE-5 = 20.5.5.5/32
+!
+
+!! ========================================
+!! Physical Interface Configuration - Uplinks to Aggregation
+!! Point-to-Point links to aggregation routers
+!! ========================================
+
+!! Example: Link to AGG-1
+interface TenGigE0/0/0/0
+ description Uplink to AGG-1 TenGigE0/0/0/2
+ ipv4 address 172.16.10.2 255.255.255.252
+ ipv4 point-to-point
+ no shutdown
+!
+
+!! Example: Link to AGG-2 (Redundant Path)
+interface TenGigE0/0/0/1
+ description Uplink to AGG-2 TenGigE0/0/0/2
+ ipv4 address 172.16.12.2 255.255.255.252
+ ipv4 point-to-point
+ no shutdown
+!
+
+!! ========================================
+!! Service Interfaces (Customer Facing)
+!! Various customer connection types
+!! ========================================
+
+!! Customer A - Direct Connect (L3VPN)
+interface GigabitEthernet0/0/0/10
+ description Customer-A Site Main Office
+ vrf CUSTOMER-A
+ ipv4 address 192.168.100.1 255.255.255.0
+ no shutdown
+!
+
+!! Customer A - Sub-interface with 802.1Q VLAN
+interface GigabitEthernet0/0/0/11.100
+ description Customer-A Site Branch VLAN 100
+ vrf CUSTOMER-A
+ ipv4 address 192.168.101.1 255.255.255.0
+ encapsulation dot1q 100
+!
+
+!! Customer B - Direct Connect (L3VPN)
+interface GigabitEthernet0/0/0/12
+ description Customer-B Site Main Office
+ vrf CUSTOMER-B
+ ipv4 address 192.168.200.1 255.255.255.0
+ no shutdown
+!
+
+!! Customer C - Direct Connect (L3VPN)
+interface GigabitEthernet0/0/0/13
+ description Customer-C Site Main Office
+ vrf CUSTOMER-C
+ ipv4 address 192.168.300.1 255.255.255.0
+ no shutdown
+!
+
+!! ========================================
+!! L2VPN Configuration Example (Optional)
+!! EVPN or VPWS for L2 Services
+!! ========================================
+l2vpn
+ bridge group CUSTOMER-A-L2
+  bridge-domain BD-100
+   interface GigabitEthernet0/0/0/14.200
+   !
+   vfi VFI-CUSTOMER-A
+    neighbor 20.2.2.2 pw-id 100
+     mpls static label local 1000 remote 1000
+    !
+   !
+  !
+ !
+!
+
+interface GigabitEthernet0/0/0/14.200
+ description Customer-A L2VPN VLAN 200
+ encapsulation dot1q 200
+!
+
+!! ========================================
+!! Router ISIS Configuration
+!! IS-IS with Segment Routing Extensions
+!! ========================================
+router isis CORE
+ is-type level-2-only
+ net 49.0001.XXXX.XXXX.XXXX.00
+ ! Example: EDGE-1 = 49.0001.0020.0001.0001.00
+ ! Example: EDGE-2 = 49.0001.0020.0002.0002.00
+ ! Example: EDGE-3 = 49.0001.0020.0003.0003.00
+ ! Example: EDGE-4 = 49.0001.0020.0004.0004.00
+ ! Example: EDGE-5 = 49.0001.0020.0005.0005.00
+ !
+ nsr
+ nsf cisco
+ log adjacency changes
+ lsp-gen-interval maximum-wait 5000 initial-wait 50 secondary-wait 200
+ lsp-refresh-interval 65000
+ max-lsp-lifetime 65535
+ !
+ address-family ipv4 unicast
+  metric-style wide
+  advertise passive-only
+  mpls traffic-eng level-2-only
+  mpls traffic-eng router-id Loopback0
+  segment-routing mpls
+  segment-routing prefix-sid-map advertise-local
+  spf-interval maximum-wait 5000 initial-wait 50 secondary-wait 200
+  microloop avoidance segment-routing
+ !
+ !
+ interface Loopback0
+  passive
+  address-family ipv4 unicast
+   prefix-sid index XXX
+   ! Example: EDGE-1 = 301, EDGE-2 = 302, EDGE-3 = 303, EDGE-4 = 304, EDGE-5 = 305
+  !
+ !
+ interface TenGigE0/0/0/0
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 50
+  !
+ !
+ interface TenGigE0/0/0/1
+  circuit-type level-2-only
+  point-to-point
+  address-family ipv4 unicast
+   fast-reroute per-prefix
+   fast-reroute per-prefix ti-lfa
+   metric 50
+  !
+ !
+!
+
+!! ========================================
+!! BGP Configuration for L3VPN Services
+!! ========================================
+router bgp 65000
+ bgp router-id X.X.X.X
+ ! Use Loopback0 IP address
+ !
+ bgp graceful-restart
+ !
+ address-family ipv4 unicast
+ !
+ address-family vpnv4 unicast
+ !
+ !
+ neighbor-group RR-CLIENTS
+  remote-as 65000
+  update-source Loopback0
+  address-family ipv4 unicast
+  !
+  address-family vpnv4 unicast
+  !
+ !
+ !
+ neighbor 1.1.1.1
+  use neighbor-group RR-CLIENTS
+  description CORE-1 Route Reflector
+ !
+ neighbor 2.2.2.2
+  use neighbor-group RR-CLIENTS
+  description CORE-2 Route Reflector
+ !
+ !
+ vrf CUSTOMER-A
+  rd 65000:100
+  address-family ipv4 unicast
+   redistribute connected
+   redistribute static
+  !
+  neighbor 192.168.100.2
+   remote-as 65100
+   address-family ipv4 unicast
+    route-policy CUSTOMER-A-IN in
+    route-policy CUSTOMER-A-OUT out
+   !
+  !
+ !
+ vrf CUSTOMER-B
+  rd 65000:200
+  address-family ipv4 unicast
+   redistribute connected
+   redistribute static
+  !
+  neighbor 192.168.200.2
+   remote-as 65200
+   address-family ipv4 unicast
+    route-policy CUSTOMER-B-IN in
+    route-policy CUSTOMER-B-OUT out
+   !
+  !
+ !
+ vrf CUSTOMER-C
+  rd 65000:300
+  address-family ipv4 unicast
+   redistribute connected
+   redistribute static
+  !
+ !
+!
+
+!! ========================================
+!! Route Policy Configuration
+!! ========================================
+prefix-set CUSTOMER-A-PREFIXES
+  192.168.0.0/16 le 24
+end-set
+!
+prefix-set CUSTOMER-B-PREFIXES
+  10.0.0.0/8 le 24
+end-set
+!
+
+route-policy CUSTOMER-A-IN
+  if destination in CUSTOMER-A-PREFIXES then
+    pass
+  else
+    drop
+  endif
+end-policy
+!
+route-policy CUSTOMER-A-OUT
+  pass
+end-policy
+!
+route-policy CUSTOMER-B-IN
+  if destination in CUSTOMER-B-PREFIXES then
+    pass
+  else
+    drop
+  endif
+end-policy
+!
+route-policy CUSTOMER-B-OUT
+  pass
+end-policy
+!
+
+!! ========================================
+!! MPLS Configuration
+!! ========================================
+mpls oam
+!
+mpls ldp
+ log
+  neighbor
+ !
+!
+
+!! ========================================
+!! BFD Configuration for Fast Failure Detection
+!! ========================================
+bfd
+ multipath include location 0/0/CPU0
+!
+
+!! Apply BFD to uplink interfaces
+interface TenGigE0/0/0/0
+ bfd mode ietf
+ bfd address-family ipv4 timers start 180
+ bfd address-family ipv4 multiplier 3
+ bfd address-family ipv4 destination 172.16.10.1
+ bfd address-family ipv4 fast-detect
+!
+
+interface TenGigE0/0/0/1
+ bfd mode ietf
+ bfd address-family ipv4 timers start 180
+ bfd address-family ipv4 multiplier 3
+ bfd address-family ipv4 destination 172.16.12.1
+ bfd address-family ipv4 fast-detect
+!
+
+!! ========================================
+!! QoS Policy Configuration
+!! ========================================
+class-map match-any VOICE
+ match dscp ef
+ end-class-map
+!
+class-map match-any BUSINESS-CRITICAL
+ match dscp af41
+ match dscp af42
+ match dscp af43
+ end-class-map
+!
+class-map match-any BULK-DATA
+ match dscp af11
+ match dscp af12
+ match dscp af13
+ end-class-map
+!
+class-map match-any class-default
+ match any
+ end-class-map
+!
+
+policy-map INGRESS-CLASSIFICATION
+ class VOICE
+  set mpls experimental imposition 5
+  set traffic-class 5
+  police rate 10 mbps
+  !
+ !
+ class BUSINESS-CRITICAL
+  set mpls experimental imposition 4
+  set traffic-class 4
+ !
+ class BULK-DATA
+  set mpls experimental imposition 1
+  set traffic-class 1
+ !
+ class class-default
+  set mpls experimental imposition 0
+  set traffic-class 0
+ !
+!
+
+policy-map CORE-EGRESS-QUEUING
+ class VOICE
+  priority level 1
+  queue-limit 100 ms
+ !
+ class BUSINESS-CRITICAL
+  bandwidth percent 40
+ !
+ class BULK-DATA
+  bandwidth percent 20
+ !
+ class class-default
+  bandwidth percent 20
+ !
+!
+
+!! Apply QoS policies
+interface GigabitEthernet0/0/0/10
+ service-policy input INGRESS-CLASSIFICATION
+!
+
+interface GigabitEthernet0/0/0/12
+ service-policy input INGRESS-CLASSIFICATION
+!
+
+interface TenGigE0/0/0/0
+ service-policy output CORE-EGRESS-QUEUING
+!
+
+interface TenGigE0/0/0/1
+ service-policy output CORE-EGRESS-QUEUING
+!
+
+!! ========================================
+!! Access Control Lists for Security
+!! ========================================
+ipv4 access-list CUSTOMER-A-ACL
+ 10 permit ip 192.168.0.0 0.0.255.255 any
+ 20 deny ip any any log
+!
+
+ipv4 access-list CUSTOMER-B-ACL
+ 10 permit ip 10.0.0.0 0.255.255.255 any
+ 20 deny ip any any log
+!
+
+!! Apply ACLs to customer interfaces
+interface GigabitEthernet0/0/0/10
+ ipv4 access-group CUSTOMER-A-ACL ingress
+!
+
+interface GigabitEthernet0/0/0/12
+ ipv4 access-group CUSTOMER-B-ACL ingress
+!
+
+!! ========================================
+!! SSH and Management Configuration
+!! ========================================
+ssh server v2
+ssh server vrf default
+ssh server netconf vrf default
+
+!! ========================================
+!! NETCONF Configuration (Optional)
+!! ========================================
+netconf-yang agent
+ ssh
+!
+
+!! ========================================
+!! Syslog Configuration
+!! ========================================
+logging console debugging
+logging monitor debugging
+logging buffered 10000000
+
+!! ========================================
+!! NTP Configuration
+!! ========================================
+ntp
+ server X.X.X.X
+ ! Replace with your NTP server
+!
+
+!! ========================================
+!! AAA Configuration (Basic)
+!! ========================================
+aaa authentication login default local
+aaa authorization exec default local
+
+!! ========================================
+!! User Configuration
+!! ========================================
+username admin
+ group root-lr
+ group cisco-support
+ secret 10 $6$encrypted_password_here
+!
+
+!! ========================================
+!! Control Plane Protection
+!! ========================================
+control-plane
+ management-plane
+  inband
+   interface all
+    allow all
+   !
+  !
+ !
+!
+
+!! ========================================
+!! Performance Measurement (Optional)
+!! SR Performance Measurement for latency monitoring
+!! ========================================
+performance-measurement
+ interface TenGigE0/0/0/0
+  delay-measurement
+   advertise-delay 10
+  !
+ !
+ interface TenGigE0/0/0/1
+  delay-measurement
+   advertise-delay 10
+  !
+ !
+!
+
+!! End of Edge Router Configuration
